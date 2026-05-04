@@ -1,0 +1,9 @@
+# macOS
+.DS_Store
+
+# devtool build symlinks (created by LCM SDK)
+oe-logs
+oe-workdir
+
+# Claude Code local settings
+.claude/
