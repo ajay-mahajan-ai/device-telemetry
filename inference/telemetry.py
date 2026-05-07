@@ -28,6 +28,8 @@ STATS_KEYS = [
     "ErrorsSent",
     "ErrorsReceived",
     "FCSErrorCount",
+    "RetryCount",
+    "MultipleRetryCount",
     "X_COMCAST-COM_ActivityFactor",
     "X_COMCAST-COM_RetransmissionMetric",
 ]
@@ -41,6 +43,10 @@ RADIO_KEYS = [
     "TransmitPower",
     "AutoChannelEnable",
     "OperatingStandards",
+    "CurrentOperatingChannelBandwidth",
+    "ChannelLoad",
+    "Interference",
+    "ActiveAssociatedDevices",
 ]
 
 
@@ -88,16 +94,18 @@ def extract_radios(raw_radios: dict) -> list:
         if idx not in radios:
             radios[idx] = {"radio_index": idx}
 
-        is_stats = len(parts) >= 4 and parts[3] == "Stats"
+        is_main  = len(parts) == 3
+        is_stats = len(parts) == 4 and parts[3] == "Stats"
 
         if is_stats:
             for k in STATS_KEYS:
                 if k in values:
                     radios[idx][k] = _coerce(values[k])
-        else:
+        elif is_main:
             for k in RADIO_KEYS:
                 if k in values:
                     radios[idx][k] = _coerce(values[k])
+        # all other sub-paths (RadCaps, ScanConfig, ChannelMgt, …) are ignored
 
     return list(radios.values())
 
