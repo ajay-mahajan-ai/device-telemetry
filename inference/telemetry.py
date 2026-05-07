@@ -132,9 +132,9 @@ class TelemetryPublisher:
         self.mqtt_client = mqtt.Client(_cbv.VERSION2) if _cbv else mqtt.Client()
 
     def connect_mqtt(self):
+        self.mqtt_client.loop_start()
         try:
             self.mqtt_client.connect(self.mqtt_broker, self.mqtt_port, keepalive=60)
-            self.mqtt_client.loop_start()
             print(f"INFO: Connected to MQTT {self.mqtt_broker}:{self.mqtt_port} "
                   f"(device_id={self.device_id})")
         except Exception as e:
@@ -151,6 +151,10 @@ class TelemetryPublisher:
                   f"noise={radio.get('Noise')}")
         except Exception as e:
             print(f"WARN: publish failed for {topic}: {e}")
+            try:
+                self.mqtt_client.reconnect()
+            except Exception:
+                pass
 
     def run(self):
         self.connect_mqtt()

@@ -9,6 +9,29 @@
 /* Recursively dump amxc_var_t as JSON into a FILE */
 static void var_to_json(FILE *f, const amxc_var_t *var, int depth);
 
+static void write_json_string(FILE *f, const char *s)
+{
+    fputc('"', f);
+    for (; *s; s++) {
+        unsigned char c = (unsigned char)*s;
+        switch (c) {
+        case '"':  fputs("\\\"", f); break;
+        case '\\': fputs("\\\\", f); break;
+        case '\b': fputs("\\b",  f); break;
+        case '\f': fputs("\\f",  f); break;
+        case '\n': fputs("\\n",  f); break;
+        case '\r': fputs("\\r",  f); break;
+        case '\t': fputs("\\t",  f); break;
+        default:
+            if (c < 0x20)
+                fprintf(f, "\\u%04x", c);
+            else
+                fputc(c, f);
+        }
+    }
+    fputc('"', f);
+}
+
 static void htable_to_json(FILE *f, const amxc_var_t *var, int depth)
 {
     const amxc_htable_t *htable = amxc_var_constcast(amxc_htable_t, var);
@@ -20,7 +43,8 @@ static void htable_to_json(FILE *f, const amxc_var_t *var, int depth)
         const char *key = amxc_htable_it_get_key(it);
         amxc_var_t *child = amxc_var_from_htable_it(it);
         if (!first) fprintf(f, ",");
-        fprintf(f, "\"%s\":", key);
+        write_json_string(f, key);
+        fputc(':', f);
         var_to_json(f, child, depth + 1);
         first = 0;
     }
@@ -61,7 +85,7 @@ static void var_to_json(FILE *f, const amxc_var_t *var, int depth)
     case AMXC_VAR_ID_SSV_STRING:
     case AMXC_VAR_ID_CSV_STRING: {
         const char *s = amxc_var_constcast(cstring_t, var);
-        fprintf(f, "\"%s\"", s ? s : "");
+        write_json_string(f, s ? s : "");
         break;
     }
     case AMXC_VAR_ID_BOOL:
@@ -114,13 +138,14 @@ int nbapi_client_collect(nbapi_client_t *client)
 {
     amxc_var_t result;
     amxc_var_t *radio_data;
+    char tmp_path[sizeof(METRICS_OUTPUT) + 4];
     FILE *f;
     time_t ts;
     int ret;
 
     amxc_var_init(&result);
 
-    ret = amxb_get(client->bus_ctx, WIFI_RADIO_QUERY, INT32_MAX, &result, 5);
+    ret = amxb_get(client->bus_ctx, WIFI_RADIO_QUERY, 2, &result, 5);
     if (ret != AMXB_STATUS_OK) {
         reporter_log("WARN: amxb_get(%s) failed (ret=%d)\n", WIFI_RADIO_QUERY, ret);
         amxc_var_clean(&result);
@@ -129,9 +154,10 @@ int nbapi_client_collect(nbapi_client_t *client)
 
     radio_data = GET_ARG(&result, "0");
 
-    f = fopen(METRICS_OUTPUT, "w");
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", METRICS_OUTPUT);
+    f = fopen(tmp_path, "w");
     if (!f) {
-        reporter_log("ERROR: Cannot open %s for writing\n", METRICS_OUTPUT);
+        reporter_log("ERROR: Cannot open %s for writing\n", tmp_path);
         amxc_var_clean(&result);
         return -1;
     }
@@ -142,6 +168,12 @@ int nbapi_client_collect(nbapi_client_t *client)
     var_to_json(f, radio_data, 0);
     fprintf(f, "}\n");
     fclose(f);
+
+    if (rename(tmp_path, METRICS_OUTPUT) != 0) {
+        reporter_log("ERROR: rename %s failed\n", tmp_path);
+        amxc_var_clean(&result);
+        return -1;
+    }
 
     amxc_var_clean(&result);
     reporter_log("INFO: Telemetry written to %s\n", METRICS_OUTPUT);
