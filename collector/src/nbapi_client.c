@@ -1,6 +1,7 @@
 #include "nbapi_client.h"
 #include "reporter.h"
 
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
@@ -119,14 +120,14 @@ int nbapi_client_collect(nbapi_client_t *client)
 
     amxc_var_init(&result);
 
-    ret = amxb_get(client->bus_ctx, WIFI_RADIO_QUERY, 0, &result, 5);
+    ret = amxb_get(client->bus_ctx, WIFI_RADIO_QUERY, INT32_MAX, &result, 5);
     if (ret != AMXB_STATUS_OK) {
         reporter_log("WARN: amxb_get(%s) failed (ret=%d)\n", WIFI_RADIO_QUERY, ret);
         amxc_var_clean(&result);
         return -1;
     }
 
-    radio_data = amxc_var_get_first(GET_ARG(&result, "0"));
+    radio_data = GET_ARG(&result, "0");
 
     f = fopen(METRICS_OUTPUT, "w");
     if (!f) {

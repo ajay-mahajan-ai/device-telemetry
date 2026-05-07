@@ -6,16 +6,16 @@
 #include <amxd/amxd_types.h>
 #include <amxb/amxb.h>
 
-/* AMXB_BACKEND_PATH and AMXB_SOCKET_URI are set by CMake via -DPLATFORM=rdkb|prplos */
+/* AMXB_BACKEND_PATH, AMXB_SOCKET_URI, WIFI_RADIO_QUERY set by CMake via -DPLATFORM=rdkb|prplos */
 #ifndef AMXB_BACKEND_PATH
 #error "AMXB_BACKEND_PATH not defined — build with -DPLATFORM=rdkb or -DPLATFORM=prplos"
 #endif
 #ifndef AMXB_SOCKET_URI
 #error "AMXB_SOCKET_URI not defined — build with -DPLATFORM=rdkb or -DPLATFORM=prplos"
 #endif
-
-/* Query all radio objects and their stats recursively */
-#define WIFI_RADIO_QUERY   "Device.WiFi.Radio.**"
+#ifndef WIFI_RADIO_QUERY
+#error "WIFI_RADIO_QUERY not defined — build with -DPLATFORM=rdkb or -DPLATFORM=prplos"
+#endif
 
 #define METRICS_OUTPUT     "/tmp/device_telemetry.json"
 

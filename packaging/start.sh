@@ -47,7 +47,7 @@ start_collector
 start_publisher
 
 while true; do
-    wait -n 2>/dev/null
+    sleep 5
 
     if ! kill -0 "$COLLECTOR_PID" 2>/dev/null; then
         log "WARN: telemetry-collector exited — restarting"

@@ -50,10 +50,12 @@ def get_device_id():
 
 def extract_radios(raw_radios: dict) -> list:
     """
-    Parse the amxb_get result for Device.WiFi.Radio.**.
+    Parse the amxb_get result for WiFi.Radio.** (prplOS) or Device.WiFi.Radio.** (RDK-B).
     The result is a flat dict keyed by TR-181 path, e.g.:
-      "Device.WiFi.Radio.1.":  { "Channel": "6", ... }
-      "Device.WiFi.Radio.1.Stats.": { "Noise": "-99", ... }
+      "WiFi.Radio.1.":       { "Channel": "6", ... }          (prplOS)
+      "WiFi.Radio.1.Stats.": { "Noise": "-99", ... }          (prplOS)
+      "Device.WiFi.Radio.1.":       { "Channel": "6", ... }   (RDK-B)
+      "Device.WiFi.Radio.1.Stats.": { "Noise": "-99", ... }   (RDK-B)
     We group by radio index and merge radio + stats fields.
     """
     if not isinstance(raw_radios, dict):
@@ -65,23 +67,28 @@ def extract_radios(raw_radios: dict) -> list:
         if not isinstance(values, dict):
             continue
 
-        # Match Device.WiFi.Radio.{i}. and Device.WiFi.Radio.{i}.Stats.
-        parts = path.rstrip(".").split(".")
-        # parts: ['Device','WiFi','Radio','1'] or ['Device','WiFi','Radio','1','Stats']
-        if len(parts) < 4:
+        # Normalize: strip optional "Device." prefix so both platforms parse identically.
+        norm = path.lstrip(".")
+        if norm.startswith("Device."):
+            norm = norm[len("Device."):]
+
+        # Match WiFi.Radio.{i}. and WiFi.Radio.{i}.Stats.
+        parts = norm.rstrip(".").split(".")
+        # parts: ['WiFi','Radio','1'] or ['WiFi','Radio','1','Stats']
+        if len(parts) < 3:
             continue
-        if parts[0] != "Device" or parts[1] != "WiFi" or parts[2] != "Radio":
+        if parts[0] != "WiFi" or parts[1] != "Radio":
             continue
 
         try:
-            idx = int(parts[3])
+            idx = int(parts[2])
         except ValueError:
             continue
 
         if idx not in radios:
             radios[idx] = {"radio_index": idx}
 
-        is_stats = len(parts) >= 5 and parts[4] == "Stats"
+        is_stats = len(parts) >= 4 and parts[3] == "Stats"
 
         if is_stats:
             for k in STATS_KEYS:
