@@ -1,6 +1,12 @@
 #!/bin/sh
 # PID 1 supervisor for device-telemetry container
 
+# On RDK-B, /host-lib is a read-only bind-mount of the host's /usr/lib. It provides
+# the rbus stack (librbus, librbuscore, librtMessage, ...) and also the RDK-B amx libs,
+# which must match the version mod-amxb-rbus.so was compiled against. Host libs take
+# precedence so the amxb version check inside amxb_be_load passes.
+export LD_LIBRARY_PATH=/host-lib:/usr/lib
+
 COLLECTOR=/usr/bin/telemetry-collector
 PUBLISHER=/usr/share/device-telemetry/telemetry.py
 HOST_CONFIG=/etc/device_telemetry.conf

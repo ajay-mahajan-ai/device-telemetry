@@ -4,3 +4,4 @@
 # This bbappend overrides it with the correct supervisor entrypoint.
 OCI_IMAGE_ENTRYPOINT = "/usr/bin/device-telemetry-start.sh"
 OCI_IMAGE_ENTRYPOINT_MAX_TIMEOUT = "30"
+

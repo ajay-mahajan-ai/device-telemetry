@@ -10,7 +10,7 @@ LCM/LXC container that collects per-radio WiFi stats from an RDK-B or prplOS dev
 ## NBAPI Interface
 - Socket: `rbus:/tmp/rtrouted` (RDK-B uses RBus, not ubus — socket at `/tmp/rtrouted` on device)
 - Backend: `/usr/bin/mods/amxb/mod-amxb-rbus.so` (mounted from host `/usr/bin/mods/amxb/mod-amxb-rbus.so`)
-- Query path: `Device.WiFi.Radio.**`
+- Query path: `Device.WiFi.Radio.` (trailing dot — `**` is not supported by the rbus amxb backend)
 - Key headers: `<amxb/amxb.h>`, `<amxc/amxc.h>`
 - Note: `ubus list` is empty on RDK-B — all DM objects are on RBus via `rtrouted` daemon
 
@@ -83,11 +83,21 @@ ubus-cli 'SoftwareModules.InstallDU(
       Source = "/etc/device_telemetry.conf",
       Destination = "/etc/device_telemetry.conf",
       Options = "type=mount,bind,ro,create=file"
+    },
+    {
+      Source = "/usr/lib",
+      Destination = "/host-lib",
+      Options = "type=mount,bind,ro,create=dir"
     }
   ],
   NetworkConfig = { ShareParentNetwork = 1 }
 )'
 ```
+
+Note: The `/usr/lib` → `/host-lib` mount provides `librbus.so.0` and its full dependency chain
+(`librbuscore`, `librtMessage`, `libmsgpackc`, `libcjson`, `librdkloggers`, ...) which are not in the
+prplOS-based container image. `start.sh` sets `LD_LIBRARY_PATH=/usr/lib:/host-lib` so the
+container's own amx libs take precedence and rbus libs are resolved from the host mount.
 
 ### RDK-B — MaxLinear LGM (x86-64)
 
@@ -125,6 +135,11 @@ ubus-cli 'SoftwareModules.InstallDU(
       Source = "/mnt/device_telemetry.conf",
       Destination = "/etc/device_telemetry.conf",
       Options = "type=mount,bind,ro,create=file"
+    },
+    {
+      Source = "/usr/lib",
+      Destination = "/host-lib",
+      Options = "type=mount,bind,ro,create=dir"
     }
   ],
   NetworkConfig = { ShareParentNetwork = 1 }
@@ -559,12 +574,16 @@ Common cause: wrong `WIFI_RADIO_QUERY` for the platform. prplOS uses `WiFi.Radio
 
 ### Collector logs "amxb_get failed (ret=2)"
 
-WiFi DM path mismatch. prplOS exposes `WiFi.Radio.**` (no `Device.` prefix). The binary was built with the wrong `PLATFORM`. Rebuild with `-DPLATFORM=prplos` (set via `PLATFORM ?= "prplos"` in the recipe).
+Two possible causes:
+
+**Wrong platform path** — prplOS exposes `WiFi.Radio.` (no `Device.` prefix); RDK-B exposes `Device.WiFi.Radio.`. The binary was built with the wrong `PLATFORM`. Rebuild with the correct `-DPLATFORM=` value.
 
 Verify inside a running container:
 ```bash
-ubus list | grep -i wifi   # should show WiFi.Radio.1 / WiFi.Radio.2 / WiFi.Radio.3
+ubus list | grep -i wifi   # prplOS: should show WiFi.Radio.1 / WiFi.Radio.2 ...
 ```
+
+**`**` wildcard not supported** — Neither the rbus nor ubus amxb backend supports the `**` recursive syntax. Use a trailing dot (`Device.WiFi.Radio.` or `WiFi.Radio.`) with the depth parameter in `amxb_get`.
 
 ## Monitor (on USP controller)
 ```bash
