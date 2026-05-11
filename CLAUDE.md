@@ -57,13 +57,13 @@ POLL_INTERVAL_SEC=10
 
 ## Deploy on device
 
-### RDK-B
+### RDK-B — BananaPi BPI-R4 (aarch64)
 ```bash
-# 1. Create config
+# 1. Create config (/etc is writable on BPI RDK-B)
 echo "MQTT_BROKER=10.10.10.172" > /etc/device_telemetry.conf
 echo "MQTT_PORT=1883" >> /etc/device_telemetry.conf
 
-# 2. Install container (use the latest pushed image tag)
+# 2. Install container
 ubus-cli 'SoftwareModules.InstallDU(
   URL = "docker://ghcr.io/ajay-mahajan-ai/device-telemetry-rdkb:<tag>",
   UUID = "<RFC4122-v5-UUID>",
@@ -81,6 +81,48 @@ ubus-cli 'SoftwareModules.InstallDU(
     },
     {
       Source = "/etc/device_telemetry.conf",
+      Destination = "/etc/device_telemetry.conf",
+      Options = "type=mount,bind,ro,create=file"
+    }
+  ],
+  NetworkConfig = { ShareParentNetwork = 1 }
+)'
+```
+
+### RDK-B — MaxLinear LGM (x86-64)
+
+**Platform notes:**
+- Root filesystem is **read-only** — config must be on `/mnt` (the r/w filesystem)
+- LCM lives under `/mnt/lcm/`
+- rbus socket: `/tmp/rtrouted` (confirmed)
+- `mod-amxb-rbus.so` at `/usr/bin/mods/amxb/mod-amxb-rbus.so` (confirmed)
+- rlyeh has a 10-second curl timeout — pull from ghcr.io works; local registry
+  with `host:port` URLs are misrouted by rlyeh's credential config (it splits on
+  `:` and substitutes a configured `server-address:port` placeholder)
+
+```bash
+# 1. Create config on the writable filesystem
+echo "MQTT_BROKER=10.10.10.172" > /mnt/device_telemetry.conf
+echo "MQTT_PORT=1883" >> /mnt/device_telemetry.conf
+
+# 2. Install container
+ubus-cli 'SoftwareModules.InstallDU(
+  URL = "docker://ghcr.io/ajay-mahajan-ai/device-telemetry-rdkb-x86:<tag>",
+  UUID = "<RFC4122-v5-UUID>",
+  ExecutionEnvRef = "generic",
+  HostObject = [
+    {
+      Source = "/tmp/rtrouted",
+      Destination = "/tmp/rtrouted",
+      Options = "type=mount,bind,rw,create=file"
+    },
+    {
+      Source = "/usr/bin/mods/amxb/mod-amxb-rbus.so",
+      Destination = "/usr/bin/mods/amxb/mod-amxb-rbus.so",
+      Options = "type=mount,bind,ro,create=file"
+    },
+    {
+      Source = "/mnt/device_telemetry.conf",
       Destination = "/etc/device_telemetry.conf",
       Options = "type=mount,bind,ro,create=file"
     }
