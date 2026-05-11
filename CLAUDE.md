@@ -18,20 +18,25 @@ LCM/LXC container that collects per-radio WiFi stats from an RDK-B or prplOS dev
 
 The container targets two device types. The bus backend differs between them.
 
-| | RDK-B (x86-64) | prplOS (cortexa53 / ARM) |
+| | RDK-B (aarch64) | prplOS (cortexa53 / ARM) |
 |---|---|---|
-| Device arch | x86-64 | cortexa53 |
-| LCM SDK image | `lcm_sdk_x86-64:v3.2-alpha` | `lcm_sdk_cortexa53:v3.2-alpha` |
-| SDK container | `lcm_sdk_rdkb` | `lcm_sdk_prplos` |
+| Device arch | cortexa53 (aarch64) | cortexa53 (aarch64) |
+| LCM SDK image | `lcm_sdk_cortexa53:v3.2-alpha` | `lcm_sdk_cortexa53:v3.2-alpha` |
+| SDK container | `lcm_sdk_prplos` (same SDK, different PLATFORM) | `lcm_sdk_prplos` |
+| Build flag | `PLATFORM = "rdkb"` in local.conf | `PLATFORM = "prplos"` (default) |
 | Bus | RBus | ubus |
-| Backend `.so` | `mod-amxb-rbus.so` | `mod-amxb-ubus.so` |
+| Backend `.so` | `mod-amxb-rbus.so` (mounted from host) | `mod-amxb-ubus.so` (baked in) |
 | Socket | `/tmp/rtrouted` | `/var/run/ubus/ubus.sock` |
 | `AMXB_SOCKET_URI` | `rbus:/tmp/rtrouted` | `ubus:/var/run/ubus.sock` |
 | `ubus list` | empty | WiFi objects present |
 | WiFi DM path | `Device.WiFi.Radio.**` | `WiFi.Radio.**` |
 | Image tag | `:v1.0.0-rdkb` | `:v1.0.0-prplos` |
 
-The platform is selected at build time via `PLATFORM` in `packaging/device-telemetry_git.bb`. No header edits needed — see Build section below.
+Both platforms use the **same cortexa53 SDK**. Only the `PLATFORM` build flag differs.
+The `lcm_sdk_rdkb` container (x86-64 SDK) is **not used** — the device is aarch64.
+
+The platform is selected at build time by setting `PLATFORM = "rdkb"` in `conf/local.conf`
+before running `devtool build`. No header edits needed — see Build section below.
 
 ## MQTT Topics
 ```
@@ -316,6 +321,9 @@ Always confirm the built image has the correct entrypoint before pushing:
 
 ```bash
 TIMESTAMP=$(ls -d tmp/deploy/images/container-cortexa53/image-lcm-container-minimal-container-cortexa53-[0-9]*.rootfs-oci 2>/dev/null | sort | tail -1)
+echo "Using: $TIMESTAMP"
+
+TIMESTAMP=$(ls -d tmp/deploy/images/container-x86-64/image-lcm-container-minimal-container-x86-64-[0-9]*.rootfs-oci 2>/dev/null | sort | tail -1)
 echo "Using: $TIMESTAMP"
 
 MANIFEST_HASH=$(python3 -c "

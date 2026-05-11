@@ -30,6 +30,9 @@ RDEPENDS:${PN} += " \
 do_install:append() {
     install -d ${D}/usr/bin
     install -m 0755 ${S}/packaging/start.sh ${D}/usr/bin/device-telemetry-start.sh
+    # LXC requires /dev and /dev/pts to exist in the rootfs for devpts setup
+    install -d ${D}/dev
+    install -d ${D}/dev/pts
 }
 
 OCI_IMAGE_ENTRYPOINT = "/usr/bin/device-telemetry-start.sh"
