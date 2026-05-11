@@ -14,26 +14,27 @@ LCM/LXC container that collects per-radio WiFi stats from an RDK-B or prplOS dev
 - Key headers: `<amxb/amxb.h>`, `<amxc/amxc.h>`
 - Note: `ubus list` is empty on RDK-B — all DM objects are on RBus via `rtrouted` daemon
 
-## Platform Differences (RDK-B vs prplOS)
+## Platform Differences
 
-The container targets two device types. The bus backend differs between them.
+Three build targets — pick the right SDK + PLATFORM combination:
 
-| | RDK-B (aarch64) | prplOS (cortexa53 / ARM) |
-|---|---|---|
-| Device arch | cortexa53 (aarch64) | cortexa53 (aarch64) |
-| LCM SDK image | `lcm_sdk_cortexa53:v3.2-alpha` | `lcm_sdk_cortexa53:v3.2-alpha` |
-| SDK container | `lcm_sdk_prplos` (same SDK, different PLATFORM) | `lcm_sdk_prplos` |
-| Build flag | `PLATFORM = "rdkb"` in local.conf | `PLATFORM = "prplos"` (default) |
-| Bus | RBus | ubus |
-| Backend `.so` | `mod-amxb-rbus.so` (mounted from host) | `mod-amxb-ubus.so` (baked in) |
-| Socket | `/tmp/rtrouted` | `/var/run/ubus/ubus.sock` |
-| `AMXB_SOCKET_URI` | `rbus:/tmp/rtrouted` | `ubus:/var/run/ubus.sock` |
-| `ubus list` | empty | WiFi objects present |
-| WiFi DM path | `Device.WiFi.Radio.**` | `WiFi.Radio.**` |
-| Image tag | `:v1.0.0-rdkb` | `:v1.0.0-prplos` |
+| | prplOS (BPI-R4) | RDK-B (BPI-R4) | RDK-B (MaxLinear LGM) |
+|---|---|---|---|
+| Device | BananaPi BPI-R4 | BananaPi BPI-R4 | MaxLinear LGM |
+| OS | prplOS | RDK-B | RDK-B |
+| Device arch | aarch64 | aarch64 | x86-64 |
+| LCM SDK | `lcm_sdk_cortexa53:v3.2-alpha` | `lcm_sdk_cortexa53:v3.2-alpha` | `lcm_sdk_x86-64:v3.2-alpha` |
+| SDK container | `lcm_sdk_prplos` | `lcm_sdk_prplos` | `lcm_sdk_rdkb` |
+| `PLATFORM` | `prplos` (default) | `rdkb` | `rdkb` |
+| Bus | ubus | RBus | RBus |
+| Backend `.so` | `mod-amxb-ubus.so` (baked in) | `mod-amxb-rbus.so` (host mount) | `mod-amxb-rbus.so` (host mount) |
+| Socket | `/var/run/ubus/ubus.sock` | `/tmp/rtrouted` | `/tmp/rtrouted` |
+| WiFi DM path | `WiFi.Radio.**` | `Device.WiFi.Radio.**` | `Device.WiFi.Radio.**` |
+| Image tag | `device-telemetry-prplos` | `device-telemetry-rdkb` | `device-telemetry-rdkb-x86` |
 
-Both platforms use the **same cortexa53 SDK**. Only the `PLATFORM` build flag differs.
-The `lcm_sdk_rdkb` container (x86-64 SDK) is **not used** — the device is aarch64.
+**Key rule:** SDK container determines the binary arch; `PLATFORM` in `conf/local.conf`
+determines the WiFi DM path and bus socket. BananaPi RDK-B and prplOS use the
+same cortexa53 SDK — only `PLATFORM` differs. MaxLinear needs the x86-64 SDK.
 
 The platform is selected at build time by setting `PLATFORM = "rdkb"` in `conf/local.conf`
 before running `devtool build`. No header edits needed — see Build section below.
