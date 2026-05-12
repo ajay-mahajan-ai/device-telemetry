@@ -22,6 +22,9 @@ fi
 POLL_INTERVAL_SEC=${POLL_INTERVAL_SEC:-10}
 MQTT_BROKER=${MQTT_BROKER:-localhost}
 MQTT_PORT=${MQTT_PORT:-1883}
+MQTT_BROKER_PUBLIC=${MQTT_BROKER_PUBLIC:-}
+MQTT_PORT_PUBLIC=${MQTT_PORT_PUBLIC:-1883}
+MQTT_TOPIC_PREFIX=${MQTT_TOPIC_PREFIX:-telemetry}
 
 log() { echo "[device-telemetry] $*"; }
 
@@ -32,11 +35,14 @@ start_collector() {
 }
 
 start_publisher() {
-    log "Starting telemetry.py (broker=${MQTT_BROKER}:${MQTT_PORT})"
+    log "Starting telemetry.py (broker=${MQTT_BROKER}:${MQTT_PORT} public=${MQTT_BROKER_PUBLIC:-none})"
     python3 "$PUBLISHER" \
-        --broker "$MQTT_BROKER" \
-        --port   "$MQTT_PORT" \
-        --interval $(( POLL_INTERVAL_SEC + 1 )) &
+        --broker              "$MQTT_BROKER" \
+        --port                "$MQTT_PORT" \
+        --interval            $(( POLL_INTERVAL_SEC + 1 )) \
+        --public-broker       "$MQTT_BROKER_PUBLIC" \
+        --public-port         "$MQTT_PORT_PUBLIC" \
+        --public-topic-prefix "$MQTT_TOPIC_PREFIX" &
     PUBLISHER_PID=$!
 }
 
