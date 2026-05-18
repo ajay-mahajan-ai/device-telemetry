@@ -145,7 +145,8 @@ static void fetch_model_name(nbapi_client_t *client, char *buf, size_t bufsz)
     buf[0] = '\0';
     amxc_var_init(&result);
 
-    ret = amxb_get(client->bus_ctx, DEVICE_INFO_QUERY, 1, &result, 5);
+    /* Query the specific leaf parameter — depth 0, small result */
+    ret = amxb_get(client->bus_ctx, DEVICE_INFO_QUERY, 0, &result, 5);
     if (ret != AMXB_STATUS_OK) {
         reporter_log("WARN: amxb_get(%s) failed (ret=%d)\n", DEVICE_INFO_QUERY, ret);
         goto done;
@@ -153,22 +154,22 @@ static void fetch_model_name(nbapi_client_t *client, char *buf, size_t bufsz)
 
     data = GET_ARG(&result, "0");
     if (!data || amxc_var_type_of(data) != AMXC_VAR_ID_HTABLE) {
-        reporter_log("WARN: DeviceInfo result has unexpected type\n");
+        reporter_log("WARN: ModelName result has unexpected type\n");
         goto done;
     }
 
-    /* result is { "Device.DeviceInfo.": { "ModelName": "...", ... } } */
+    /* result is { "Device.DeviceInfo.ModelName": "SX1200-D" } */
     it = amxc_htable_get_first(amxc_var_constcast(amxc_htable_t, data));
     if (!it) {
-        reporter_log("WARN: DeviceInfo htable is empty\n");
+        reporter_log("WARN: ModelName htable is empty\n");
         goto done;
     }
 
-    mn = GET_CHAR(amxc_var_from_htable_it(it), "ModelName");
+    mn = amxc_var_constcast(cstring_t, amxc_var_from_htable_it(it));
     if (mn && *mn) {
         strncpy(buf, mn, bufsz - 1);
     } else {
-        reporter_log("WARN: ModelName not found in DeviceInfo response\n");
+        reporter_log("WARN: ModelName value is empty\n");
     }
 
 done:
