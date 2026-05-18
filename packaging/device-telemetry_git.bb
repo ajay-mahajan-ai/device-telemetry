@@ -37,5 +37,7 @@ do_install:append() {
     install -d ${D}/dev/pts
 }
 
+FILES:${PN} += "/dev /dev/pts"
+
 OCI_IMAGE_ENTRYPOINT = "/usr/bin/device-telemetry-start.sh"
 OCI_IMAGE_ENTRYPOINT_MAX_TIMEOUT = "30"
