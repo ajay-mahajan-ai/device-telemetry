@@ -165,15 +165,15 @@ static void fetch_model_name(nbapi_client_t *client, char *buf, size_t bufsz)
         goto done;
     }
 
-    /* dyncast converts any amxc type (not just cstring) to a string */
-    mn = amxc_var_dyncast(cstring_t, amxc_var_from_htable_it(it));
+    /* amxb groups results under the parent object path even for leaf queries:
+       { "Device.DeviceInfo.": { "ModelName": "TNETC550" } }
+       So the first htable entry's value is itself an htable — use GET_CHAR. */
+    mn = GET_CHAR(amxc_var_from_htable_it(it), "ModelName");
     if (mn && *mn) {
         strncpy(buf, mn, bufsz - 1);
     } else {
-        reporter_log("WARN: ModelName value is empty or not convertible (type=%d)\n",
-                     amxc_var_type_of(amxc_var_from_htable_it(it)));
+        reporter_log("WARN: ModelName not found or empty in DeviceInfo result\n");
     }
-    free((void *)mn);
 
 done:
     amxc_var_clean(&result);
