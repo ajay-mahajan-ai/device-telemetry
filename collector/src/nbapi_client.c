@@ -134,11 +134,42 @@ int nbapi_client_init(nbapi_client_t *client)
     return 0;
 }
 
+static void fetch_model_name(nbapi_client_t *client, char *buf, size_t bufsz)
+{
+    amxc_var_t result;
+    amxc_var_t *data;
+    amxc_htable_it_t *it;
+    const char *mn;
+
+    buf[0] = '\0';
+    amxc_var_init(&result);
+
+    if (amxb_get(client->bus_ctx, DEVICE_INFO_QUERY, 1, &result, 5) != AMXB_STATUS_OK)
+        goto done;
+
+    data = GET_ARG(&result, "0");
+    if (!data || amxc_var_type_of(data) != AMXC_VAR_ID_HTABLE)
+        goto done;
+
+    /* result is { "Device.DeviceInfo.": { "ModelName": "...", ... } } */
+    it = amxc_htable_get_first(amxc_var_constcast(amxc_htable_t, data));
+    if (!it)
+        goto done;
+
+    mn = GET_CHAR(amxc_var_from_htable_it(it), "ModelName");
+    if (mn && *mn)
+        strncpy(buf, mn, bufsz - 1);
+
+done:
+    amxc_var_clean(&result);
+}
+
 int nbapi_client_collect(nbapi_client_t *client)
 {
     amxc_var_t result;
     amxc_var_t *radio_data;
     char tmp_path[sizeof(METRICS_OUTPUT) + 4];
+    char model_name[128];
     FILE *f;
     time_t ts;
     int ret;
@@ -154,6 +185,8 @@ int nbapi_client_collect(nbapi_client_t *client)
 
     radio_data = GET_ARG(&result, "0");
 
+    fetch_model_name(client, model_name, sizeof(model_name));
+
     snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", METRICS_OUTPUT);
     f = fopen(tmp_path, "w");
     if (!f) {
@@ -164,6 +197,8 @@ int nbapi_client_collect(nbapi_client_t *client)
 
     time(&ts);
     fprintf(f, "{\"timestamp\":%ld", (long)ts);
+    fprintf(f, ",\"model_name\":");
+    write_json_string(f, model_name);
     fprintf(f, ",\"radios\":");
     var_to_json(f, radio_data, 0);
     fprintf(f, "}\n");
@@ -176,7 +211,7 @@ int nbapi_client_collect(nbapi_client_t *client)
     }
 
     amxc_var_clean(&result);
-    reporter_log("INFO: Telemetry written to %s\n", METRICS_OUTPUT);
+    reporter_log("INFO: Telemetry written to %s (model=%s)\n", METRICS_OUTPUT, model_name);
     return 0;
 }
 

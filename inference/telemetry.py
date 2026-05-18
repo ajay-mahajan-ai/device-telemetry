@@ -174,9 +174,9 @@ class TelemetryPublisher:
             except Exception:
                 pass
 
-    def publish_radio(self, radio: dict, ts: int):
+    def publish_radio(self, radio: dict, ts: int, model_name: str = ""):
         idx = radio.get("radio_index", 0)
-        payload = {**radio, "device_id": self.device_id, "timestamp": ts}
+        payload = {**radio, "device_id": self.device_id, "model_name": model_name, "timestamp": ts}
         payload_str = json.dumps(payload)
 
         topic = f"telemetry/{self.device_id}/radio/{idx}"
@@ -203,12 +203,13 @@ class TelemetryPublisher:
                         data = json.load(f)
 
                     ts = int(data.get("timestamp", time.time()))
+                    model_name = data.get("model_name", "")
                     radios = extract_radios(data.get("radios") or {})
 
                     if not radios:
                         print("WARN: No radio data found in metrics JSON")
                     for radio in radios:
-                        self.publish_radio(radio, ts)
+                        self.publish_radio(radio, ts, model_name)
 
             except FileNotFoundError:
                 pass

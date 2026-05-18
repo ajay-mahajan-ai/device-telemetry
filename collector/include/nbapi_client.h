@@ -16,6 +16,9 @@
 #ifndef WIFI_RADIO_QUERY
 #error "WIFI_RADIO_QUERY not defined — build with -DPLATFORM=rdkb or -DPLATFORM=prplos"
 #endif
+#ifndef DEVICE_INFO_QUERY
+#error "DEVICE_INFO_QUERY not defined — build with -DPLATFORM=rdkb or -DPLATFORM=prplos"
+#endif
 
 #define METRICS_OUTPUT     "/tmp/device_telemetry.json"
 

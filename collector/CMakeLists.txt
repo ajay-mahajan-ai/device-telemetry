@@ -5,10 +5,12 @@ if(PLATFORM STREQUAL "rdkb")
     set(AMXB_BACKEND_PATH  "/usr/bin/mods/amxb/mod-amxb-rbus.so")
     set(AMXB_SOCKET_URI    "rbus:/tmp/rtrouted")
     set(WIFI_RADIO_QUERY   "Device.WiFi.Radio.")
+    set(DEVICE_INFO_QUERY  "Device.DeviceInfo.")
 elseif(PLATFORM STREQUAL "prplos")
     set(AMXB_BACKEND_PATH  "/usr/bin/mods/amxb/mod-amxb-ubus.so")
     set(AMXB_SOCKET_URI    "ubus:/var/run/ubus.sock")
     set(WIFI_RADIO_QUERY   "WiFi.Radio.")
+    set(DEVICE_INFO_QUERY  "DeviceInfo.")
 else()
     message(FATAL_ERROR "Unknown PLATFORM '${PLATFORM}'. Use -DPLATFORM=rdkb or -DPLATFORM=prplos")
 endif()
@@ -34,6 +36,7 @@ target_compile_definitions(telemetry-collector PRIVATE
     AMXB_BACKEND_PATH="${AMXB_BACKEND_PATH}"
     AMXB_SOCKET_URI="${AMXB_SOCKET_URI}"
     WIFI_RADIO_QUERY="${WIFI_RADIO_QUERY}"
+    DEVICE_INFO_QUERY="${DEVICE_INFO_QUERY}"
 )
 
 target_include_directories(telemetry-collector PRIVATE
