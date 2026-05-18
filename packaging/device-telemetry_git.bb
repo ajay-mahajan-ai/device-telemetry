@@ -30,6 +30,8 @@ RDEPENDS:${PN} += " \
 do_install:append() {
     install -d ${D}/usr/bin
     install -m 0755 ${S}/packaging/start.sh ${D}/usr/bin/device-telemetry-start.sh
+    install -d ${D}/usr/share/device-telemetry
+    install -m 0644 ${S}/packaging/device_telemetry.conf ${D}/usr/share/device-telemetry/device_telemetry.conf
     # LXC requires /dev and /dev/pts to exist in the rootfs for devpts setup
     install -d ${D}/dev
     install -d ${D}/dev/pts
