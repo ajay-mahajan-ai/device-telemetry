@@ -140,25 +140,36 @@ static void fetch_model_name(nbapi_client_t *client, char *buf, size_t bufsz)
     amxc_var_t *data;
     amxc_htable_it_t *it;
     const char *mn;
+    int ret;
 
     buf[0] = '\0';
     amxc_var_init(&result);
 
-    if (amxb_get(client->bus_ctx, DEVICE_INFO_QUERY, 1, &result, 5) != AMXB_STATUS_OK)
+    ret = amxb_get(client->bus_ctx, DEVICE_INFO_QUERY, 1, &result, 5);
+    if (ret != AMXB_STATUS_OK) {
+        reporter_log("WARN: amxb_get(%s) failed (ret=%d)\n", DEVICE_INFO_QUERY, ret);
         goto done;
+    }
 
     data = GET_ARG(&result, "0");
-    if (!data || amxc_var_type_of(data) != AMXC_VAR_ID_HTABLE)
+    if (!data || amxc_var_type_of(data) != AMXC_VAR_ID_HTABLE) {
+        reporter_log("WARN: DeviceInfo result has unexpected type\n");
         goto done;
+    }
 
     /* result is { "Device.DeviceInfo.": { "ModelName": "...", ... } } */
     it = amxc_htable_get_first(amxc_var_constcast(amxc_htable_t, data));
-    if (!it)
+    if (!it) {
+        reporter_log("WARN: DeviceInfo htable is empty\n");
         goto done;
+    }
 
     mn = GET_CHAR(amxc_var_from_htable_it(it), "ModelName");
-    if (mn && *mn)
+    if (mn && *mn) {
         strncpy(buf, mn, bufsz - 1);
+    } else {
+        reporter_log("WARN: ModelName not found in DeviceInfo response\n");
+    }
 
 done:
     amxc_var_clean(&result);
